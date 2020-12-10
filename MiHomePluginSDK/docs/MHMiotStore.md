@@ -15,9 +15,9 @@ var MHMiotStore = require('NativeModules').MHMiotStore;
 
 ### API
 
-#### *openURL(url, callback)*
+#### *openURL(url, callback)*  `AL-[113,)`
 
-描述：打开商城某页面
+描述：打开商城某页面, 低于113的app会存在阻塞现象
 
 参数：
 
@@ -27,7 +27,7 @@ var MHMiotStore = require('NativeModules').MHMiotStore;
 例子：
 
 ```javascript
-MHMiotStore.openURL('www.xiaomi.com', (error) => {
+MHMiotStore.openURL('http://home.mi.com/shop/detail?gid=100260', (error) => {
   if(error)
     MHPluginSDK.showFailedTips('打开失败');
 });

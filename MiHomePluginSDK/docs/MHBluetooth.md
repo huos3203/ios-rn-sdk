@@ -1,16 +1,18 @@
 # MiHomePlugin API参考文档
 ## MHBluetooth模块 `AL-[100,)`
 
-插件通过 MHBluetooth 模块与蓝牙设备交互。此模块中封装了与米家对接的蓝牙设备连接、断开、发现服务、读写、监听广播等功能。使用方式类似于 CoreBluetooth。
+扩展程序通过 MHBluetooth 模块与支持小米蓝牙协议的设备交互。此模块中封装了与米家对接的蓝牙设备连接、断开、发现服务、读写、监听广播等功能。使用方式类似于 CoreBluetooth。
 
-**目前只支持遵循米家蓝牙协议的设备。**
+如果该模块中的 API 不能全部满足业务需求，可使用 `MHBluetoothLE` 加 `MHXiaomiBLE` 模块来实现。
+
+**注意扩展程序需要正确处理蓝牙的连接与断开。用户退出插件时，必须断开连接。**
 
 ```js
 // 模块初始化
 var MHBluetooth = require('NativeModules').MHBluetooth;
 ```
 
-**SDK 提供了一个蓝牙示例插件，见 com.xiaomi.bledemo.ios  目录**
+**我们提供了一个蓝牙示例插件，见 com.xiaomi.bledemo.ios  目录**
 
 ### 常量
 无
@@ -119,12 +121,11 @@ componentWillUnmount() {
 #### *discoverServices()*
 >发现当前设备peripheral的services。
 >
->```js
->var {DeviceEventEmitter} = require('react-native');
->var subscription = DeviceEventEmitter.addListener(MHBluetooth.peripheral_didDiscoverServices,(notification) => {
->  console.log(JSON.stringify(notification));
->  MHBluetooth.serviceUUIDsWithCallback((uuids) => {
->```
+```js
+var {DeviceEventEmitter} = require('react-native');
+var subscription = DeviceEventEmitter.addListener(MHBluetooth.peripheral_didDiscoverServices,(notification) => {
+  console.log(JSON.stringify(notification));
+  MHBluetooth.serviceUUIDsWithCallback((uuids) => {
     console.log(uuids);
   });
 });
@@ -146,16 +147,16 @@ MHBluetooth.discoverServices();
 >**注意** 该方法的 callback 并不能返回数据，只是返回读取是否成功，数据的返回与 CoreBluetooth 一样，会通过对应的回调方法。
 >
 >```js
-var {DeviceEventEmitter} = require('react-native');
-// 订阅特征值更新通知
-var subscription = DeviceEventEmitter.addListener(MHBluetooth.peripheral_didUpdateValueForCharacteristic_error,(notification) => {
-  console.log(JSON.stringify(notification));
-});
-// 读取特征值
-MHBluetooth.readBase64DataWithCallback("0001", "fe95", (isSuccess, loopbackParams) => {
-  //
-});
-```
+>var {DeviceEventEmitter} = require('react-native');
+>// 订阅特征值更新通知
+>var subscription = DeviceEventEmitter.addListener(MHBluetooth.peripheral_didUpdateValueForCharacteristic_error,(notification) => {
+>  console.log(JSON.stringify(notification));
+>});
+>// 读取特征值
+>MHBluetooth.readBase64DataWithCallback("0001", "fe95", (isSuccess, loopbackParams) => {
+>  //
+>});
+>```
 
 #### *writeBase64DataWithCallback(data, characteristicUUID, serviceUUID, type, callback)*
 >向当前设备peripheral的指定characteristic写入值（base64编码）
@@ -167,6 +168,18 @@ MHBluetooth.readBase64DataWithCallback("0001", "fe95", (isSuccess, loopbackParam
 >`callback` 回调方法 **(bool isSuccess, [data, characteristicUUID, serviceUUID, type])**
 >
 >**注意** 该方法的 callback 并不能返回设备侧是否写入成功，只是返回APP侧写入命令执行是否成功，与 CoreBluetooth 一样，会通过对应的回调方法返回写入成功（ type=0 的情况下）。
+
+#### *writeHexDataWithCallback(hexString, characteristicUUID, serviceUUID, type, callback)*   `AL-[113,)`
+>向当前设备peripheral的指定characteristic写入值（16进制字符串格式）
+>
+>`data` 写入的数据，用16进制字符串格式，写入时会自动解码
+>`characteristicUUID` 指定characteristic的UUID字符串
+>`serviceUUID` 指定service的UUID字符串
+>`type` 写入方式（0=需要response, 1=不需要response）
+>`callback` 回调方法 **(bool isSuccess, [data, characteristicUUID, serviceUUID, type])**
+>
+>**注意** 该方法的 callback 并不能返回设备侧是否写入成功，只是返回APP侧写入命令执行是否成功，与 CoreBluetooth 一样，会通过对应的回调方法返回写入成功（ type=0 的情况下）。
+
 
 #### *setNotifyWithCallback(needNotify, characteristicUUID, serviceUUID, callback)*
 >设置当前设备peripheral的指定characteristic的通知状态
@@ -241,6 +254,7 @@ MHBluetooth.readBase64DataWithCallback("0001", "fe95", (isSuccess, loopbackParam
 >获取蓝牙状态
 ```javascript
 MHBluetooth.getBluetoothStateCallback((state)=>{
+
 	//CBManagerStateUnknown = 0,
 	//CBManagerStateResetting,
 	//CBManagerStateUnsupported,
@@ -249,5 +263,28 @@ MHBluetooth.getBluetoothStateCallback((state)=>{
 	//CBManagerStatePoweredOn,
 });
 ```
+
+#### *getPeripheralInfo:(callback)* `AL-[116,)`
+>获取蓝牙peripheral信息
+```javascript
+MHBluetooth.getPeripheralInfo((success,peripheral)=>{
+	if(success){
+      console.warn(peripheral);
+	}
+});
+```
+#### *readRSSI* `AL-[116,)`
+>获取蓝牙peripheral rssi信息
+>
+>peripheral_didReadRSSI_error 通过此事件监听rssi值回调
+>
+>peripheralDidUpdateRSSI_error 通过此事件监听rssi error信息
+```javascript
+//添加监听
+...
+
+MHBluetooth.readRSSI();
+```
+
 
 

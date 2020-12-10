@@ -4,7 +4,9 @@ var React = require('react-native');
 var ActionSheetIOS = require('ActionSheetIOS');
 var HelloDeveloper = require('../CommonModules/HelloDeveloper');
 var HelloReactART = require('../CommonModules/HelloReactART');
-
+var NewStructureTest = require('./NewStructureTest');
+var ScreenShot = require('./ScreenShot');
+var MultiLanguage = require('./MultiLanguage');
 var {
   StyleSheet,
   Text,
@@ -70,6 +72,12 @@ class MoreMenu extends Component {
             MHPluginSDK.openFeedback();
           }
         },
+        {
+          'name': '截图',
+          'func': () => {
+            this.screenShot();
+          }
+        },
       ];
     }
 
@@ -99,6 +107,12 @@ class MoreMenu extends Component {
         }
       },
       {
+        'name': '多语言测试',
+        'func': () => {
+          this.showMultiLanguage();
+        }
+      },
+      {
         'name': '分享',
         'func': () => {
           MHPluginSDK.openShareListBar("小米智能家庭", "小米智能家庭", "about_icon_app", "http://open.home.mi.com");
@@ -110,6 +124,12 @@ class MoreMenu extends Component {
           //        MHPluginSDK.shareToML("小米智能家庭", "小米智能家庭", this.props.app.pathForResource("icon_demo.png"), "http://open.home.mi.com");
           // 分享到朋友圈
           //        MHPluginSDK.shareToWeChatMoment("小米智能家庭", "小米智能家庭", this.props.app.pathForResource("icon_demo.png"), "http://open.home.mi.com");
+        }
+      },
+      {
+        'name':'新目录结构获取图片方式测试',
+        'func':() =>{
+          this.props.navigator.push(NewStructureTest.route);
         }
       },
     ];
@@ -152,6 +172,12 @@ class MoreMenu extends Component {
     this.props.navigator.push(HelloReactART.route);
   }
 
+  showMultiLanguage(){
+    this.props.navigator.push(MultiLanguage.route);
+  }
+  screenShot(){
+    this.props.navigator.push(ScreenShot.route);
+  }
   showActionSheet() {
     ActionSheetIOS.showActionSheetWithOptions({
           options: BUTTONS,

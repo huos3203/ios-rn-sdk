@@ -20,9 +20,9 @@ var MHPluginSDK = require('NativeModules').MHPluginSDK;
 var MHBluetoothLE = require('NativeModules').MHBluetoothLE;
 var MHXiaomiBLE = require('NativeModules').MHXiaomiBLE;
 
-const UUID_SERVICE = 'FFEF';
-const UUID_LED_READ_WRITE = 'FFE0';
-const UUID_BUTTON_READ_WRITE_NOTIFY = 'FFE1';
+const UUID_SERVICE = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E';
+const UUID_LED_READ_WRITE = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E';
+const UUID_BUTTON_READ_WRITE_NOTIFY = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E';
 
 var SingleLineSwitchCell = require('./Cells/SingleLineSwitchCell');
 var DoubleLineRowCell = require('./Cells/DoubleLineRowCell');
@@ -31,8 +31,8 @@ class XiaoMiBLEMainPage extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    this.basePath = MHPluginSDK.basePath;
 
+    this.basePath = MHPluginSDK.basePath;
     this.state = {
       bledColor: '#330000',
       device: false,
@@ -45,31 +45,25 @@ class XiaoMiBLEMainPage extends React.Component {
     };
   }
 
-  componentWillMount() {
-
-    //获取已连接的设备信息
+  componentDidMount() {
+    //获取当前的设备信息
     MHXiaomiBLE.getDefaultDevice((error, device) => {
       if (!error) {
-        MHPluginSDK.showLoadingTips('连接设备中.');
+        MHPluginSDK.showLoadingTips('连接设备中');
         MHXiaomiBLE.loginXiaoMiBLE(device.did, device.mac, 4, (error, result) => {
           MHPluginSDK.dismissTips();
           if (!error) {
-            MHBluetoothLE.getDefaultDevice((error, device) => {
-              if (!error) {
-                this.state.device = device;
-                this._initDevice(device);
-              }else {
-                MHPluginSDK.showFailTips("连接设备失败！");
-                this.props.navigator.pop();
-              }
-            });
-          }else {
-            MHPluginSDK.showFailTips("连接设备失败！");
+            this.state.device = result.device;
+            this._initDevice();
+          }
+          else {
+            MHPluginSDK.showFailTips("连接设备失败，XiaomiBLE无法登录");
             this.props.navigator.pop();
           }
         });
-      }else {
-        MHPluginSDK.showFailTips("连接设备失败！");
+      }
+      else {
+        MHPluginSDK.showFailTips("连接设备失败，XiaomiBLE无法获取设备");
         this.props.navigator.pop();
       }
     });
@@ -113,11 +107,11 @@ class XiaoMiBLEMainPage extends React.Component {
 
   }
 
-  _initDevice(device) {
-
+  _initDevice() {
     //读取设备的服务特征
     if (this.state.device) {
       if (!this.state.device.peripheral.services[UUID_SERVICE]) {
+        console.log("搜索设备的服务");
         //搜索设备的服务
         MHBluetoothLE.discoverServices(this.state.device.peripheral.identifier, [UUID_SERVICE], (error, peripheral, services) => {
           if (!error && services[UUID_SERVICE]) {
@@ -126,7 +120,8 @@ class XiaoMiBLEMainPage extends React.Component {
             MHPluginSDK.showFailTips('未能找到匹配的操作:'+error.message);
           }
         });
-      }else {
+      }
+      else {
         this._initCharacteristicStatus(this.state.device.peripheral.services[UUID_SERVICE]);
       }
     }else {
@@ -135,29 +130,17 @@ class XiaoMiBLEMainPage extends React.Component {
   }
 
   _initCharacteristicStatus(service) {
+    console.log("搜索设备的特征");
     if (!service) {
       return;
     }
-    if (!service.characteristics[UUID_LED_READ_WRITE]) {
-      this._discoverCharacteristis(UUID_SERVICE, [UUID_LED_READ_WRITE]);
-    }else {
-      this.state.fledCharacteristic = service.characteristics[UUID_LED_READ_WRITE];
-    }
-    if(!service.characteristics[UUID_BUTTON_READ_WRITE_NOTIFY]){
-      this._discoverCharacteristis(UUID_SERVICE, [UUID_BUTTON_READ_WRITE_NOTIFY]);
-    }else {
-      this.setState({
-        isNotifying: service.characteristics[UUID_BUTTON_READ_WRITE_NOTIFY].isNotifying,
-        bledCharacteristic: service.characteristics[UUID_BUTTON_READ_WRITE_NOTIFY],
-      });
-      this._notifySwitch.setSwichByProps(this.state.isNotifying);
-    }
+    this._discoverCharacteristis(UUID_SERVICE, [UUID_LED_READ_WRITE,UUID_BUTTON_READ_WRITE_NOTIFY]);
   }
-  //搜索相关的服务信息
+
   _discoverCharacteristis(serivceUUID, characteristicUUIDs) {
     MHBluetoothLE.discoverCharacteristics(this.state.device.peripheral.identifier, serivceUUID, characteristicUUIDs, (error, serivce, characteristics) => {
-      if (!error) {
-        //通知是否被打开
+      if (!error) 
+{        //通知是否被打开
         if(characteristics[UUID_BUTTON_READ_WRITE_NOTIFY]){
           this.setState({
             isNotifying: characteristics[UUID_BUTTON_READ_WRITE_NOTIFY].isNotifying,
@@ -175,10 +158,6 @@ class XiaoMiBLEMainPage extends React.Component {
     });
   }
 
-  componentDidMount() {
-
-  }
-
   componentWillUnmount() {
      this._didDisconnectPeripheralListener.remove();
      this._didUpdateValueForCharacteristicListener.remove();
@@ -189,10 +168,10 @@ class XiaoMiBLEMainPage extends React.Component {
      }
      clearInterval(this._getRSSITimer);
   }
+  
   render() {
     return (
       <View style={styles.containerAll}>
-        <StatusBar barStyle='default' />
         <View style={styles.containerIconDemo}>
           <View style={[styles.RGBResultViewButton, {backgroundColor: this.state.bledColor}]}></View>
           <Image style={styles.iconDemo} source={{uri:this.basePath + "control_home.png"}} >
@@ -211,7 +190,7 @@ class XiaoMiBLEMainPage extends React.Component {
                 this._changeNotifyState(this.state.bledCharacteristic, isOn);
               }
             }}/>
-          <SingleLineSwitchCell title='打开闪灯' description='' showLine={true} isOn={this.state.isGlitter} key='light'
+          <SingleLineSwitchCell title='开关闪灯' description='' showLine={true} isOn={this.state.isGlitter} key='light'
             ref={(lightSwitch) => {
               this._lightSwitch = lightSwitch;
             }}
@@ -230,13 +209,22 @@ class XiaoMiBLEMainPage extends React.Component {
       MHPluginSDK.showFailTips('获取数据失败:'+JSON.stringify(error));
       return;
     }
-
     if (characteristic) {
       if (characteristic.uuid === UUID_LED_READ_WRITE) {
-
-
-      }else if (characteristic.uuid === UUID_BUTTON_READ_WRITE_NOTIFY) {
+        console.log("收到消息: " + JSON.stringify(msgData));
+      }
+      else if (characteristic.uuid === UUID_BUTTON_READ_WRITE_NOTIFY) {
         //button 按钮消息响应
+        console.log("收到消息内容为 " + JSON.stringify(msgData));
+
+        //假如发送给设备的消息经过加密
+        MHXiaomiBLE.decryptMessageXiaoMiBLE(msgData,(error,decrypted)=>{
+          if (error) {
+            return;
+          }
+          console.log("解密消息内容为 " + JSON.stringify(decrypted));
+        });
+
         this.setState({"bledColor": '#FF0000'}); //先变红色
         setTimeout(() => {
           this.setState({"bledColor": '#330000'}); //再还原颜色
@@ -246,6 +234,7 @@ class XiaoMiBLEMainPage extends React.Component {
   }
 
   _changeNotifyState(characteristic, isOn) {
+    // console.log("change " + characteristic.uuid + isOn);
     if (isOn) {
       MHBluetoothLE.enableNotify(characteristic.peripheral, characteristic.service, characteristic.uuid, (error, characteristic) => {
         if(error){
@@ -267,6 +256,7 @@ class XiaoMiBLEMainPage extends React.Component {
   }
 
   _changeLightState(characteristic, isOn) {
+    // console.log("characteristic " + JSON.stringify(characteristic));
     var msg = false;
     if (isOn) {
       msg = 'FFFFFFFF';
@@ -274,15 +264,43 @@ class XiaoMiBLEMainPage extends React.Component {
       msg = '00000000';
     }
 
-    MHBluetoothLE.writeValue(characteristic.peripheral, characteristic.service, characteristic.uuid, msg, (error, characteristic) => {
+    //使用标准安全芯片开关接口
+    var cmd = 0;
+    if (isOn) {
+      cmd = 1;
+    }
+    MHXiaomiBLE.toggleLockXiaoMiBLE(cmd,(error,response)=>{
       if (error) {
+        MHPluginSDK.showFailTips("操作失败");
+      }
+    });
+
+    //如果消息加密发送给带加密芯片设备
+    // MHXiaomiBLE.encryptMessageXiaoMiBLE(msg,(error,encrypted)=>{
+    //   if (error) {
+    //     return;
+    //   }
+    //   this._writeValue(characteristic,encrypted.string,isOn);
+    // });
+
+    //不加密
+    // this._writeValue(characteristic,msg,isOn);
+  }
+
+  _writeValue(characteristic,msg,isOn){
+    // console.log("write " + characteristic.uuid + " " + msg);
+    MHBluetoothLE.writeWithoutResponse(characteristic.peripheral, characteristic.service, characteristic.uuid, msg, (error, characteristic) => {
+      if (error) {
+        // console.log("error " + JSON.stringify(error));
         this._lightSwitch.setSwichByProps(!isOn);
         MHPluginSDK.showFailTips(error.message);
         return;
-      }else {
+      }
+      else {
         if (isOn) {
           this.setState({"fledColor": '#FF0000'}); //先变红色
-        }else {
+        }
+        else {
           this.setState({"fledColor": '#330000'}); //先变红色
         }
       }
@@ -404,6 +422,15 @@ var route = {
   key: 'XiaoMiBLEMainPage',
   title: '小米蓝牙开发板控制示例',
   component: XiaoMiBLEMainPage,
+  navBarStyle: {
+    backgroundColor:'#0f4287',
+  },
+  navLeftButtonStyle: {
+    tintColor:'#ffffff',
+  },
+  navTitleStyle: {
+    color:'#ffffff',
+  },
 };
 
 module.exports = {

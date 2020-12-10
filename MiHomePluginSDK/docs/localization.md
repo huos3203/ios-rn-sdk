@@ -23,17 +23,59 @@ iOS9及以后的版本，系统的语言 key 包含了手机的地区信息，�
 "en":{
 },
 "zh-Hans":{ 
-  //简体中文 iOS7,8
+  //简体中文
 },
 "zh-Hant":{
-  //繁体中文 iOS7,8
+  //繁体中文
 },
 "zh-HK":{
   //繁体中文（香港）
 },
 "zh-TW":{
   //繁体中文（台湾）
+},
+"es": {
+  //西班牙语
+},
+"ru": {
+  //俄语
+},
+"ko":{
+  //韩语，暂不做要求，请根据自身产品需求决定是否支持
 }
+
 ```
+### 常量
+
+```javascript
+var ReactLocalization = require("NativeModules").ReactLocalization;
+console.warn(""constants:" + ReactLocalization.systemLanguage+"\n");
+```
+
+
+
+> language  米家中设置的语言
+>
+> systemLanguage 系统语言
+
+###方法
+
+- getLanguage(callback)  `AL-[123,)`
+
+  ```javascript
+  var ReactLocalization = require("NativeModules").ReactLocalization;
+
+  ReactLocalization.getLanguage((error, currentLanguage, systemLanguage) => {
+    //error:是否出错
+    //currentLanguage: 米家app内用户设置的语言，字符串
+    //systemLanguage: 系统的当前语言字符串
+    if(!error){
+      console.warn("currentLanguage:" + currentLanguage +"\n" + "systemLanguage:" + systemLanguage + "\n"+"constants:" + ReactLocalization.systemLanguage+"\n");
+    }
+  })
+  ```
+
+  ​
+
 
 

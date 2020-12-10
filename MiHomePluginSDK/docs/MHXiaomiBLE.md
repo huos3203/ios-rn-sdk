@@ -1,9 +1,9 @@
 # MiHomePlugin API参考文档
 ## MHXiaomiBLE模块 `AL-[111,)`
 
-在插件快联开发过程中有部分蓝牙模块使用的是小米蓝牙，由于小米蓝牙的特殊性，我们对使用小米蓝牙模块的设备提供了一个特殊的模块`MHXiaomiBLE` 来更快捷的绑定蓝牙设备到米家客户端。
+在米家扩展程序快联开发过程中有部分蓝牙模块使用的是小米蓝牙，由于小米蓝牙的特殊性，我们对使用小米蓝牙模块的设备提供了一个特殊的模块`MHXiaomiBLE` 来更快捷的绑定蓝牙设备到米家客户端。
 
-**只支持使用小米蓝牙模块的设备。**
+**只支持使用小米蓝牙模块的设备。并注意正确处理蓝牙的连接与断开。用户退出扩展程序时，必须断开连接。**
 
 ```js
 // 模块初始化
@@ -11,7 +11,7 @@ var MHXiaomiBLE = require('NativeModules').MHXiaomiBLE;
 ```
 
 ### 常量
-*didFoundXiaoMiBLEDevice* 发现小米某model的蓝牙设备通知
+####*didFoundXiaoMiBLEDevice* 发现小米某model的蓝牙设备通知
 
 ```javascript
 MHXiaomiBLE.didFoundXiaoMiBLEDevice
@@ -38,8 +38,6 @@ MHXiaomiBLE.getDefaultDevice((error, device) => {
   }
 });
 ```
-
-
 
 #### *scanXiaoMiBLE(model, timeout, callback)*
 
@@ -83,8 +81,6 @@ MHXiaomiBLE.registerXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', 10, (error, info) 
 });
 ```
 
-
-
 #### *loginXiaoMiBLE(did,mac, timeout, callback)*
 
 描述：米家客户端打开并登录设备（一般是打开已连接或者曾经连接过设备调用此函数，包含重新绑定设备逻辑）
@@ -101,11 +97,29 @@ MHXiaomiBLE.registerXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', 10, (error, info) 
 ```javascript
 MHXiaomiBLE.loginXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', 10, (error, info) => {
   if(error){
-  	MHPluginSDK.showFailedTips('登录失败：'+error.message); 
+  	MHPluginSDK.showFailedTips('登录失败：'+error.message);
   }
 });
 ```
-code为3时是token变化导致的失败，需要重新注册获取新的token
+注意，若登录失败，请查看 `error` 中的 `code` 错误码，错误码说明如下：
+
+`0` — 设备无法连接
+
+`1` — 设备登录时蓝牙连接断开
+
+`2` —  蓝牙读写失败
+
+`3` —  token 发生变化导致的失败，需要重新注册获取新的 token
+
+`4` —  成功，一般不会出现在 `error` 中
+
+`5` —  未知错误
+
+`6` —  **设备被重置，有安全风险，请提醒用户使用 APP 解绑设备，并重新添加**
+
+`7` — 未获取到有效的电子钥匙
+
+`8` — 设备数字证书不可信
 
 
 #### *bindXiaoMiBLE(did,mac, callback)*
@@ -123,7 +137,7 @@ code为3时是token变化导致的失败，需要重新注册获取新的token
 ```javascript
 MHXiaomiBLE.bindXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', (error, info) => {
   if(error){
-   	MHPluginSDK.showFailedTips('注册失败：'+error.message); 
+   	MHPluginSDK.showFailedTips('注册失败：'+error.message);
   }
 });
 ```
@@ -140,9 +154,147 @@ MHXiaomiBLE.bindXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', (error, info) => {
 
 例子：
 
-```
+```javascript
 MHXiaomiBLE.disconnectXiaoMiBLE('xdffe98sd9', '09:09:09:09:09', (error, info) => {
-  
+
 });
 ```
 
+#### *encryptMessageXiaoMiBLE*(*message*,  *callback*) `AL-[125,)`
+
+描述：支持小米加密芯片的蓝牙设备，使用此方法将明文加密为密文后，可发送给设备
+
+参数：
+
+- `message` 待加密的明文
+
+- `callback(error,encrypted)` 加密回调，error 表示是否成功，encrypted 表示加密后的数据
+
+  例子：
+
+  ```javascript
+  MHXiaomiBLE.encryptMessageXiaoMiBLE(msg,(error,encrypted)=>{
+    if (error) {
+      // 出错
+      return;
+    }
+    //console.log(encrypted.string);
+  });
+  ```
+
+#### *decryptMessageXiaoMiBLE*(*encrypted*, *callback*) `AL-[125,)`
+
+描述：支持小米加密芯片的蓝牙设备，使用此方法，可将从设备接收的密文解密
+
+参数：
+
+- `encrypted` 待解密密文
+
+- `callback(error,message)` 解密回调，error 表示是否成功，message 表示解密后的数据
+
+  例子：
+
+  ```javascript
+  MHXiaomiBLE.decryptMessageXiaoMiBLE(message,(error,decrypted)=>{
+    if (error) {
+      //出错
+      return;
+    }
+    //console.log("解密消息内容为 " + JSON.stringify(decrypted));
+  });
+  ```
+
+#### *toggleLockXiaoMiBLE(cmd,timeoutInterval,callback)* `AL-[125,)`
+
+描述：小米安全芯片门锁便捷开关
+
+参数：
+
+- `cmd` 操作命令，可传入 `0` ，`1` ，`2`三个 int 值，分别代表 开锁，上锁，反锁
+
+- `timeoutInterval` 超时时间，类型为 float，单位为秒，若对应时间过去后仍没有回到设备的开关锁回复，则 callback 返回超时 error
+
+- `callback(error,message)` 回调，error 表示是否成功
+
+  例子：
+
+  ```javascript
+  MHXiaomiBLE.toggleLockXiaoMiBLE(1,2.0,(error, message)=>{
+    if (error) {
+      //出错
+      return;
+    }
+    //console.log("上锁成功");
+  });
+  ```
+
+
+#### *secureTokenMD5(callback)*`AL-[125,)`
+
+描述：支持小米加密芯片的蓝牙设备，使用此方法，可获得设备注册后，生成的 token 的 MD5 值
+
+- `callback(error,message)` 回调，error 表示错误，message 表示获取的数据
+
+#### *isShareSecureKeyValid(callback)*`AL-[125,)`
+
+描述：支持小米加密芯片的蓝牙设备，在被分享的设备中，调用此方法，可判断分享的电子钥匙是否过期
+
+- `callback(error,message)` 回调，error 表示错误，message 表示获取的数据
+
+  例子：
+
+  ```javascript
+  MHXiaomiBLE.isShareSecureKeyValid((error,message)=>{
+  	if(!error){
+  		//根据 message 中的 ’valid‘ 字段判断，1 -- 有效；0 -- 无效（已经过期）
+  	}
+  })
+  ```
+
+
+#### *getBindKey(callback)*`AL-[137,)`
+
+描述：支持小米蓝牙协议的，且已经连接的设备可通过此方法获取bindKey
+
++ ` callback(isSuccess, message)`回调，isSuccess表示是否成功， message在成功的情况下表示bindkey， 在失败的情况下表示error。
+
+  例子：
+
+  ```js
+  MHXiaomiBLE.getBindKey((isSuccess,message)=>{
+  	if(isSuccess){
+          // bindkey
+      } else {
+          // error
+      }
+  })
+  ```
+
+
+#### *oneTimePassword(interval, digits, callback)*`AL-[137,)`
+
+描述：支持米家安全芯片的设备，通过此方法获取一次性密码组
+
+- `interval`，时间间隔，即密码组的刷新时间间隔，单位为分钟，类型为 number，传入 10  到 60 的整数
+- `digits`，密码位数，类型为 number，传入 6 到 8 的整数
+- `callback` 回调，密码组或者错误通过此返回
+
+假设输入 interval 为 30，则会从当日 0 点开始计算，每 30 分钟为一个刷新间隔。生成的密码在当前刷新间隔及下一个刷新间隔内有效。如当日 10:19 生成，则该组密码在 10:00 ~ 10:30（当前刷新间隔） 以及 10:30 ~ 11:00 (下一个刷新间隔) 有效。密码组中每条密码使用一次即过期。
+
+注意设备上获取当前时间（UTC，精度为秒）的准确性由设备保证，否则会有计算误差。
+
+示例：
+
+```javascript
+MHXiaomiBLE.oneTimePassword(30,  8, (error,passwds)=>{
+    if(!error){
+        //parse passwds array
+	}
+});
+```
+
+
+
+####*openOneTimePassword(interval, digits)*`AL-[147,)`
+
+和`oneTimePassword `的作用一样，不过这个接口是自带了UI交互逻辑的
